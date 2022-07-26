@@ -1,46 +1,68 @@
-# Java Gradle CircleCI 2.0 configuration file
-# See: https://circleci.com/docs/2.0/language-java/
-version: 2
+plugins {
+ id 'org.springframework.boot' version '2.1.6.RELEASE'
+ id 'jacoco'
+ id 'java'
+ id 'war'
+}
 
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
-jobs:
-  build:
-    # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
-    docker:
-      # specify the version you desire here
-      - image: circleci/openjdk:8-jdk
+apply plugin: 'io.spring.dependency-management'
 
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
+group = 'com.calculi'
+version = '1.0.0'
+sourceCompatibility = '11'
 
-    working_directory: ~/repo
+sourceSets {
+	integrationTest {
+		java {
+			compileClasspath += main.output + test.output
+			runtimeClasspath += main.output + test.output
+			srcDir file('src/integration-test/java')
+		}
+		resources.srcDir file('src/integration-test/resources')
+	}
+}
 
-    environment:
-      # Customize the JVM maximum heap limit
-      JVM_OPTS: -Xmx3200m
-      TERM: dumb
-    # Add steps to the job
-    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
-    steps:
-      - checkout
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+	integrationTestCompile.extendsFrom testCompile
+	integrationTestRuntime.extendsFrom testRuntime
+	integrationTestImplementation.extendsFrom testImplementation
+}
 
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-            - v1-dependencies-{{ checksum "build.gradle" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
+test {
+	reports {
+		junitXml.enabled = true
+	}
+	finalizedBy jacocoTestReport
+}
 
-      - run: gradle dependencies
+jacoco {
+	toolVersion = "0.8.4"
+}
 
-      - save_cache:
-          paths:
-            - ~/.gradle
-          key: v1-dependencies-{{ checksum "build.gradle" }}
+jacocoTestReport {
+	reports {
+		xml.enabled true
+		html.destination file("${buildDir}/jacocoHtml")
+	}
+}
 
-      # run tests!
-      - run: gradle test
+repositories {
+	mavenCentral()
+}
+
+task integrationTest(type: Test) {
+	testClassesDirs = sourceSets.integrationTest.output.classesDirs
+	classpath = sourceSets.integrationTest.runtimeClasspath
+	outputs.upToDateWhen { false }
+	reports.junitXml.enabled = true
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	integrationTestCompile 'junit:junit:4.12'
+}
