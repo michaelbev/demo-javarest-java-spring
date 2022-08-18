@@ -27,12 +27,22 @@ jobs:
       - checkout
       - run: gradle build
       - run: gradle test
-      # - run: gradle test 
+      # - run: gradle test
+  image-build-test:
+    docker:
+      - image: cimg/openjdk:11.0.13
+    steps:
+      - run: docker build -t image_javarest-math .
+  image-push:
+    docker:
+      - image: cimg/openjdk:11.0.13
+    steps:
+    - run: docker push 189768267137.dkr.ecr.us-east-1.amazonaws.com/javarest-math-repository
 workflows:
     # Build and test a simple Java project using Gradle.
   run_jobs:
     # List of jobs that will run
     jobs:
       - say_workflow_starting
-      - checkout-build-test  
+      - checkout-build-test
       - say_workflow_ending
